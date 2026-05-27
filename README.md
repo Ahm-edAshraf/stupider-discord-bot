@@ -112,6 +112,19 @@ sudo systemctl enable --now stupider-discord-bot
 sudo journalctl -u stupider-discord-bot -f
 ```
 
+## Updating the droplet
+
+After the service is installed, update code and slash commands with one command:
+
+```bash
+cd /opt/stupider-discord-bot
+sudo bash deploy/update.sh
+```
+
+That script pulls the latest GitHub code, installs dependencies, type-checks,
+clears stale slash commands, deploys the current slash commands, and restarts
+the `stupider-discord-bot` service.
+
 ## Music notes
 
 The project already includes `@discordjs/voice` and `ffmpeg` is listed in the droplet setup. Actual music playback can be added next with a queue, audio extraction, and proper error handling.
