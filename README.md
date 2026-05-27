@@ -54,8 +54,9 @@ same voice channel as the bot can use the controls.
 YouTube can block anonymous droplet playback. If playback starts failing, export
 YouTube cookies in Netscape format to a file on the droplet and set
 `YOUTUBE_COOKIES_FILE` in `.env`. Keep cookie values private.
-The bot passes Bun to `yt-dlp` as the JavaScript runtime and enables the remote
-EJS solver package that YouTube currently requires for stream extraction.
+The bot uses `yt-dlp --cookies --get-url` to resolve an authenticated audio URL,
+then hands that URL to Discord playback so `yt-dlp` does not stay running for the
+whole song.
 
 Recommended droplet cookie setup:
 

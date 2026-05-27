@@ -1,4 +1,3 @@
-import { Readable } from "node:stream";
 import { Player } from "discord-player";
 import type { Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
@@ -103,29 +102,8 @@ async function createYoutubeDlStream(track: Track) {
       const streamUrl = String(result).trim().split("\n").find(Boolean);
 
       if (streamUrl) {
-        console.log(`yt-dlp stream resolved for ${track.title} via ${attempt.name}.`);
-        const process = youtubeDl.exec(track.url, { ...attempt.flags, output: "-" });
-
-        process.catch((error) => {
-          console.error(`yt-dlp playback stream failed for ${track.title}:`, error);
-        });
-
-        if (!process.stdout) {
-          throw new Error("yt-dlp did not return an audio stream.");
-        }
-
-        const stream = Readable.from(process.stdout, { highWaterMark: 1 << 20 });
-        const stopProcess = () => {
-          if (!process.killed) {
-            process.kill();
-          }
-        };
-
-        stream.on("close", stopProcess);
-        stream.on("error", stopProcess);
-        stream.on("end", stopProcess);
-
-        return stream;
+        console.log(`yt-dlp stream URL resolved for ${track.title} via ${attempt.name}.`);
+        return streamUrl;
       }
 
       errors.push(`${attempt.name}: no stream URL returned`);
@@ -136,7 +114,7 @@ async function createYoutubeDlStream(track: Track) {
     }
   }
 
-  const message = `yt-dlp could not resolve a playable stream. ${errors.join(" | ").slice(0, 1_000)}`;
+  const message = `yt-dlp could not resolve a playable stream URL. ${errors.join(" | ").slice(0, 1_000)}`;
   console.error(message);
   throw new Error(message);
 }
