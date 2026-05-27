@@ -75,8 +75,9 @@ It also requires either `python3` or `python` before running `bun install`.
 ## Music Notes
 
 - v1 is YouTube-first.
-- `YOUTUBE_COOKIE` is optional and should be a copied YouTube `Cookie:` header value.
-- YouTube streaming uses the extractor's `useYoutubeDL` path through `youtube-dl-exec`.
+- `YOUTUBE_COOKIE` is optional for YouTube metadata sign-in.
+- `YOUTUBE_COOKIES_FILE` is preferred for playback and should point to a Netscape cookies.txt file.
+- When `YOUTUBE_COOKIES_FILE` is set, streaming uses `youtube-dl-exec` with `--cookies`.
 - `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
 - The droplet should have `python3` installed because `youtube-dl-exec` checks for it during install.
 - Do not commit real cookie values.

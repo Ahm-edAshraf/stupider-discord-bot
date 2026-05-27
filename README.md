@@ -9,7 +9,8 @@ Bun + discord.js bot scaffold with slash commands and voice-channel join/leave s
    - `DISCORD_TOKEN`
    - `DISCORD_CLIENT_ID`
    - optional `DISCORD_GUILD_ID` for fast development command deploys
-   - optional `YOUTUBE_COOKIE` for more reliable YouTube playback
+   - optional `YOUTUBE_COOKIE` for YouTube metadata sign-in
+   - optional `YOUTUBE_COOKIES_FILE` for more reliable `yt-dlp` playback
 3. Install dependencies:
 
 ```bash
@@ -50,9 +51,23 @@ The bot supports YouTube-first music playback:
 Music controls also appear as buttons under the public embeds. Anyone in the
 same voice channel as the bot can use the controls.
 
-YouTube can block anonymous droplet playback. If playback starts failing, set
-`YOUTUBE_COOKIE` in `.env` to a copied YouTube `Cookie:` header value, then
-restart the service. Keep this value private.
+YouTube can block anonymous droplet playback. If playback starts failing, export
+YouTube cookies in Netscape format to a file on the droplet and set
+`YOUTUBE_COOKIES_FILE` in `.env`. Keep cookie values private.
+
+Recommended droplet cookie setup:
+
+```bash
+cd /opt/stupider-discord-bot
+nano youtube.cookies.txt
+chmod 600 youtube.cookies.txt
+```
+
+Then set:
+
+```env
+YOUTUBE_COOKIES_FILE=/opt/stupider-discord-bot/youtube.cookies.txt
+```
 
 ## Slash command cleanup
 
