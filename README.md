@@ -9,6 +9,7 @@ Bun + discord.js bot scaffold with slash commands and voice-channel join/leave s
    - `DISCORD_TOKEN`
    - `DISCORD_CLIENT_ID`
    - optional `DISCORD_GUILD_ID` for fast development command deploys
+   - optional `YOUTUBE_COOKIE` for more reliable YouTube playback
 3. Install dependencies:
 
 ```bash
@@ -28,6 +29,30 @@ bun run start
 ```
 
 Use `bun run dev` while editing locally.
+
+## Music commands
+
+The bot supports YouTube-first music playback:
+
+```text
+/play query:<youtube url or search>
+/queue page:<optional page>
+/nowplaying
+/pause
+/resume
+/skip
+/stop
+/volume percent:<1-100>
+/join
+/leave
+```
+
+Music controls also appear as buttons under the public embeds. Anyone in the
+same voice channel as the bot can use the controls.
+
+YouTube can block anonymous droplet playback. If playback starts failing, set
+`YOUTUBE_COOKIE` in `.env` to a valid YouTube cookie string, then restart the
+service. Keep this value private.
 
 ## Slash command cleanup
 
@@ -50,7 +75,7 @@ https://discord.com/developers/applications
 Use OAuth2 URL Generator with:
 
 - Scopes: `bot`, `applications.commands`
-- Bot permissions: `Send Messages`, `Use Slash Commands`, `Connect`, `Speak`
+- Bot permissions: `Send Messages`, `Use Slash Commands`, `Embed Links`, `Connect`, `Speak`
 
 ## DigitalOcean droplet
 

@@ -14,4 +14,5 @@ export const config = {
   token: requiredEnv("DISCORD_TOKEN"),
   clientId: requiredEnv("DISCORD_CLIENT_ID"),
   guildId: process.env.DISCORD_GUILD_ID?.trim() || undefined,
+  youtubeCookie: process.env.YOUTUBE_COOKIE?.trim() || undefined,
 };

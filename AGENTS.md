@@ -10,6 +10,8 @@ Current stack:
 - Language: TypeScript
 - Discord library: `discord.js`
 - Voice support: `@discordjs/voice`
+- Music framework: `discord-player`
+- YouTube extractor: `discord-player-youtubei`
 - Env config: `dotenv`
 - Hosting target: DigitalOcean Ubuntu droplet
 - Droplet app path: `/opt/stupider-discord-bot`
@@ -23,6 +25,7 @@ Current stack:
 - Prefer practical, low-friction deployment steps for the small 1 vCPU / 1 GB RAM droplet.
 - Keep docs and deployment commands updated when behavior changes.
 - Update this file when important project decisions, workflows, or standing instructions change.
+- Music UX should use public embeds with buttons; errors should be private when practical.
 
 ## Common Commands
 
@@ -33,6 +36,19 @@ bun install
 bun run check
 bun run deploy
 bun run start
+```
+
+Music slash commands:
+
+```text
+/play
+/queue
+/nowplaying
+/pause
+/resume
+/skip
+/stop
+/volume
 ```
 
 Clear stale Discord slash commands:
@@ -51,6 +67,14 @@ sudo bash deploy/update.sh
 
 The update script pulls latest code, installs production deps, type-checks,
 clears stale commands, deploys current slash commands, and restarts systemd.
+
+## Music Notes
+
+- v1 is YouTube-first.
+- `YOUTUBE_COOKIE` is optional and improves reliability when YouTube blocks anonymous droplet playback.
+- Do not commit real cookie values.
+- Any user in the same voice channel as the bot may control playback.
+- Queue state is in-memory and clears on restart.
 
 ## Deployment Notes
 
@@ -91,6 +115,7 @@ take longer to disappear from Discord's UI.
 
 - `src/bot.ts`: Discord client startup and interaction handling.
 - `src/commands.ts`: Slash command definitions and handlers.
+- `src/music/`: Music player setup, embeds, controls, and playback actions.
 - `src/deploy-commands.ts`: Registers current slash commands.
 - `src/clear-commands.ts`: Clears global and configured guild slash commands.
 - `deploy/update.sh`: One-command droplet update script.
