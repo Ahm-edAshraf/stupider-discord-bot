@@ -7,6 +7,7 @@
     "dev": "bun --watch src/bot.ts",
     "start": "bun src/bot.ts",
     "deploy": "bun src/deploy-commands.ts",
+    "clear": "bun src/clear-commands.ts",
     "check": "tsc --noEmit"
   },
   "dependencies": {

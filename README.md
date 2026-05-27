@@ -29,6 +29,18 @@ bun run start
 
 Use `bun run dev` while editing locally.
 
+## Slash command cleanup
+
+If Discord shows old or duplicate commands, clear the registered commands once:
+
+```bash
+bun run clear
+bun run deploy
+```
+
+With `DISCORD_GUILD_ID` set, this clears both global commands and that server's
+commands. Old global commands can take a while to disappear from Discord's UI.
+
 ## Discord developer portal
 
 Create an application and bot at:
@@ -58,6 +70,7 @@ cd /opt
 git clone https://github.com/Ahm-edAshraf/stupider-discord-bot.git
 cd /opt/stupider-discord-bot
 bun install --production
+bun run clear
 bun run deploy
 bun run start
 ```
