@@ -111,7 +111,15 @@ export async function playMusic(interaction: ChatInputCommandInteraction, contex
         leaveOnStopCooldown: 5_000,
         selfDeaf: true,
         bufferingTimeout: 30_000,
-        volume: 75,
+        volume: 100,
+        disableBiquad: true,
+        disableCompressor: true,
+        disableEqualizer: true,
+        disableFilterer: true,
+        disableResampler: true,
+        disableReverb: true,
+        disableSeeker: true,
+        disableVolume: true,
       },
     });
 
@@ -261,11 +269,13 @@ export async function setVolume(interaction: ChatInputCommandInteraction, contex
     return;
   }
 
-  const volume = interaction.options.getInteger("percent", true);
-  queue.node.setVolume(volume);
-
   await interaction.reply({
-    embeds: [buildStatusEmbed("Volume updated", `Volume is now ${volume}%.`)],
+    embeds: [
+      buildStatusEmbed(
+        "Volume disabled",
+        "Runtime volume is disabled so playback can use low-CPU Opus passthrough. Adjust Discord's user volume instead.",
+      ),
+    ],
     ephemeral: true,
   });
 }

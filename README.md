@@ -51,12 +51,17 @@ The bot supports YouTube-first music playback:
 Music controls also appear as buttons under the public embeds. Anyone in the
 same voice channel as the bot can use the controls.
 
+Runtime volume changes are disabled for playback stability. The bot uses
+low-CPU Opus passthrough when YouTube returns WebM/Opus audio, so users should
+adjust Discord's per-user volume instead of using `/volume`.
+
 YouTube can block anonymous droplet playback. If playback starts failing, export
 YouTube cookies in Netscape format to a file on the droplet and set
 `YOUTUBE_COOKIES_FILE` in `.env`. Keep cookie values private.
-The bot uses `yt-dlp --cookies --get-url` to resolve an authenticated audio URL,
-then hands that URL to Discord playback so `yt-dlp` does not stay running for the
-whole song.
+The bot uses `yt-dlp --cookies --get-url` to resolve an authenticated audio URL.
+When YouTube returns WebM/Opus audio, the bot streams it directly as Opus so
+FFmpeg and the JavaScript DSP volume pipeline can be skipped. If YouTube only
+returns another format, playback falls back to FFmpeg.
 
 Recommended droplet cookie setup:
 
@@ -170,4 +175,6 @@ the `stupider-discord-bot` service.
 
 ## Music notes
 
-The project already includes `@discordjs/voice` and `ffmpeg` is listed in the droplet setup. Actual music playback can be added next with a queue, audio extraction, and proper error handling.
+Music playback is YouTube-first with an in-memory queue. `YOUTUBE_COOKIES_FILE`
+is preferred on the droplet because it lets `yt-dlp` resolve authenticated
+Googlevideo URLs without piping the whole song through `yt-dlp`.

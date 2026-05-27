@@ -23,7 +23,7 @@ Current stack:
 - Always commit and push repo changes after completing edits.
 - Keep `.env` and secrets out of git.
 - Use Bun for JS/TS commands.
-- Prefer practical, low-friction deployment steps for the small 1 vCPU / 1 GB RAM droplet.
+- Prefer practical, low-friction deployment steps for the small DigitalOcean droplet.
 - Keep docs and deployment commands updated when behavior changes.
 - Update this file when important project decisions, workflows, or standing instructions change.
 - Music UX should use public embeds with buttons; errors should be private when practical.
@@ -50,6 +50,8 @@ Music slash commands:
 /skip
 /stop
 /volume
+/join
+/leave
 ```
 
 Clear stale Discord slash commands:
@@ -79,8 +81,10 @@ It also requires either `python3` or `python` before running `bun install`.
 - `YOUTUBE_COOKIES_FILE` is preferred for playback and should point to a Netscape cookies.txt file.
 - When `YOUTUBE_COOKIES_FILE` is set, streaming uses `youtube-dl-exec` with `--cookies`.
 - yt-dlp is run with Bun as the JS runtime and `remoteComponents=ejs:npm` for YouTube EJS challenge solving.
-- Stream selection prefers low-bitrate audio-only formats to reduce stutter on the droplet.
-- Playback uses `yt-dlp --cookies --get-url` to resolve an authenticated Googlevideo URL, then returns that URL to `discord-player`.
+- Stream selection prefers low-bitrate WebM/Opus audio formats to reduce stutter on the droplet.
+- Playback uses `yt-dlp --cookies --get-url` to resolve an authenticated Googlevideo URL.
+- WebM/Opus playback returns a demuxable stream to `discord-player` so FFmpeg and DSP can be skipped.
+- Runtime volume/DSP is disabled for playback stability; users should adjust Discord's per-user volume instead of relying on `/volume`.
 - Do not pipe full playback through `yt-dlp` stdout unless URL playback breaks; the long-running pipe can peg one CPU core and cause Discord audio stutter/catch-up.
 - `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
 - The droplet should have `python3` installed because `youtube-dl-exec` checks for it during install.

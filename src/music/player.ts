@@ -1,7 +1,8 @@
-import { Player } from "discord-player";
-import type { Track } from "discord-player";
+import { Player, StreamType } from "discord-player";
+import type { ExtractorStreamable, Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
+import { Readable } from "node:stream";
 import youtubeDl from "youtube-dl-exec";
 import { config } from "../config";
 import { buildErrorEmbed, buildNowPlayingEmbed, musicControls } from "./ui";
@@ -29,11 +30,46 @@ function errorSummary(error: unknown) {
   return String(error);
 }
 
-async function createYoutubeDlStream(track: Track) {
+function isWebmOpusUrl(streamUrl: string) {
+  try {
+    const url = new URL(streamUrl);
+    const mime = url.searchParams.get("mime")?.toLowerCase() ?? "";
+    return mime === "audio/webm" || mime.includes("webm");
+  } catch {
+    return false;
+  }
+}
+
+async function createWebmOpusStream(streamUrl: string): Promise<ExtractorStreamable> {
+  const response = await fetch(streamUrl, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+    },
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Googlevideo stream fetch failed with HTTP ${response.status}.`);
+  }
+
+  return {
+    $fmt: StreamType.WebmOpus,
+    stream: Readable.fromWeb(response.body as unknown as Parameters<typeof Readable.fromWeb>[0]),
+  };
+}
+
+async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable> {
   const jsRuntime = `bun:${process.execPath}` as const;
   const format = track.live
     ? "worst[protocol^=http]/best[protocol^=http]/best"
-    : "ba[abr<=96][protocol^=http]/ba[abr<=128][protocol^=http]/ba[abr<=160][protocol^=http]/ba[protocol^=http]/ba";
+    : [
+        "ba[acodec=opus][ext=webm][abr<=96][protocol^=http]",
+        "ba[acodec=opus][ext=webm][abr<=128][protocol^=http]",
+        "ba[acodec=opus][ext=webm][abr<=160][protocol^=http]",
+        "ba[acodec=opus][ext=webm][protocol^=http]",
+        "ba[ext=webm][protocol^=http]",
+        "ba[protocol^=http]",
+      ].join("/");
 
   const baseFlags = {
     bufferSize: "64K",
@@ -103,6 +139,19 @@ async function createYoutubeDlStream(track: Track) {
 
       if (streamUrl) {
         console.log(`yt-dlp stream URL resolved for ${track.title} via ${attempt.name}.`);
+        if (isWebmOpusUrl(streamUrl)) {
+          try {
+            const stream = await createWebmOpusStream(streamUrl);
+            console.log(`Using WebM Opus passthrough for ${track.title}.`);
+            return stream;
+          } catch (error) {
+            console.error(
+              `WebM Opus passthrough failed for ${track.title}; falling back to FFmpeg: ${errorSummary(error)}`,
+            );
+          }
+        }
+
+        console.log(`Resolved stream for ${track.title} is not WebM Opus; falling back to FFmpeg.`);
         return streamUrl;
       }
 
@@ -134,7 +183,12 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
   await player.extractors.register(YoutubeiExtractor, {
     cookie: config.youtubeCookie,
     ignoreSignInErrors: true,
-    createStream: config.youtubeCookiesFile ? createYoutubeDlStream : undefined,
+    createStream: config.youtubeCookiesFile
+      ? (createYoutubeDlStream as unknown as (
+          track: Track,
+          extractor: YoutubeiExtractor,
+        ) => Promise<string | Readable>)
+      : undefined,
     useYoutubeDL: !config.youtubeCookiesFile,
     logLevel: "LOW",
     streamOptions: {
