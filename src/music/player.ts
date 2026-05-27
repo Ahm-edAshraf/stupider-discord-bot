@@ -32,8 +32,8 @@ function errorSummary(error: unknown) {
 async function createYoutubeDlStream(track: Track) {
   const jsRuntime = `bun:${process.execPath}` as const;
   const format = track.live
-    ? "best[protocol^=http]/best"
-    : "bestaudio[protocol^=http]/best[protocol^=http]/best*/best";
+    ? "worst[protocol^=http]/best[protocol^=http]/best"
+    : "ba[abr<=96][protocol^=http]/ba[abr<=128][protocol^=http]/ba[abr<=160][protocol^=http]/ba[protocol^=http]/ba";
 
   const baseFlags = {
     jsRuntimes: jsRuntime,
@@ -119,6 +119,7 @@ async function createYoutubeDlStream(track: Track) {
 export async function createMusicPlayer(client: Client): Promise<Player> {
   const player = new Player(client, {
     connectionTimeout: 30_000,
+    lagMonitor: 10_000,
     probeTimeout: 15_000,
   });
 
@@ -134,7 +135,7 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
     useYoutubeDL: !config.youtubeCookiesFile,
     logLevel: "LOW",
     streamOptions: {
-      highWaterMark: 1 << 24,
+      highWaterMark: 1 << 26,
     },
   });
 

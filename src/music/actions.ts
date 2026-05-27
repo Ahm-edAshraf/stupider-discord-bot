@@ -110,6 +110,7 @@ export async function playMusic(interaction: ChatInputCommandInteraction, contex
         leaveOnStop: true,
         leaveOnStopCooldown: 5_000,
         selfDeaf: true,
+        bufferingTimeout: 30_000,
         volume: 75,
       },
     });
