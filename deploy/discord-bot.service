@@ -1,0 +1,16 @@
+[Unit]
+Description=Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/discord-bot
+EnvironmentFile=/opt/discord-bot/.env
+ExecStart=/root/.bun/bin/bun run start
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
