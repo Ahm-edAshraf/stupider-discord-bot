@@ -30,36 +30,60 @@ function errorSummary(error: unknown) {
 }
 
 async function createYoutubeDlStream(track: Track) {
-  const flags = {
-    format: track.live ? "best[height<=360]" : "bestaudio/best",
-    output: "-",
-    cookies: config.youtubeCookiesFile,
+  const baseFlags = {
     noWarnings: true,
     noProgress: true,
     quiet: true,
+    getUrl: true,
   };
 
-  const process = youtubeDl.exec(track.url, flags);
+  const attempts = [
+    {
+      name: "cookies default",
+      flags: {
+        ...baseFlags,
+        cookies: config.youtubeCookiesFile,
+        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+      },
+    },
+    {
+      name: "cookies mweb",
+      flags: {
+        ...baseFlags,
+        cookies: config.youtubeCookiesFile,
+        extractorArgs: "youtube:player_client=mweb,web_safari",
+        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+      },
+    },
+    {
+      name: "guest mobile clients",
+      flags: {
+        ...baseFlags,
+        extractorArgs: "youtube:player_client=android_vr,web_safari,tv_embedded",
+        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+      },
+    },
+  ];
 
-  process.catch((error) => {
-    console.error(`yt-dlp failed for ${track.title}:`, error);
-  });
+  const errors: string[] = [];
 
-  if (!process.stdout) {
-    throw new Error("yt-dlp did not return an audio stream.");
+  for (const attempt of attempts) {
+    try {
+      const result = await youtubeDl(track.url, attempt.flags);
+      const streamUrl = String(result).trim().split("\n").find(Boolean);
+
+      if (streamUrl) {
+        console.log(`yt-dlp stream resolved for ${track.title} via ${attempt.name}.`);
+        return streamUrl;
+      }
+
+      errors.push(`${attempt.name}: no stream URL returned`);
+    } catch (error) {
+      errors.push(`${attempt.name}: ${errorSummary(error)}`);
+    }
   }
 
-  const stopProcess = () => {
-    if (!process.killed) {
-      process.kill();
-    }
-  };
-
-  process.stdout.on("close", stopProcess);
-  process.stdout.on("error", stopProcess);
-  process.stdout.on("end", stopProcess);
-
-  return process.stdout;
+  throw new Error(`yt-dlp could not resolve a playable stream. ${errors.join(" | ").slice(0, 1_000)}`);
 }
 
 export async function createMusicPlayer(client: Client): Promise<Player> {
