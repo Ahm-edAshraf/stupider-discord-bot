@@ -83,7 +83,7 @@ On Ubuntu:
 
 ```bash
 sudo apt update
-sudo apt install -y unzip git ffmpeg
+sudo apt install -y unzip git ffmpeg python3
 curl -fsSL https://bun.sh/install | bash
 source ~/.bashrc
 ```

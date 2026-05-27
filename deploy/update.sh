@@ -18,6 +18,11 @@ if [[ -z "$BUN_BIN" ]]; then
   fi
 fi
 
+if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+  echo "python3 was not found. Install it with: sudo apt install -y python3"
+  exit 1
+fi
+
 cd "$APP_DIR"
 
 git pull --ff-only

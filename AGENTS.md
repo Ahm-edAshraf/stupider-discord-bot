@@ -12,6 +12,7 @@ Current stack:
 - Voice support: `@discordjs/voice`
 - Music framework: `discord-player`
 - YouTube extractor: `discord-player-youtubei`
+- YouTube helper binary package: `youtube-dl-exec`
 - Env config: `dotenv`
 - Hosting target: DigitalOcean Ubuntu droplet
 - Droplet app path: `/opt/stupider-discord-bot`
@@ -69,11 +70,14 @@ The update script pulls latest code, installs all deps, type-checks,
 clears stale commands, deploys current slash commands, and restarts systemd.
 It resolves Bun from `PATH`, `/root/.bun/bin/bun`, or `$HOME/.bun/bin/bun`
 because `sudo` can hide Bun from the shell PATH on the droplet.
+It also requires either `python3` or `python` before running `bun install`.
 
 ## Music Notes
 
 - v1 is YouTube-first.
 - `YOUTUBE_COOKIE` is optional and improves reliability when YouTube blocks anonymous droplet playback.
+- `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
+- The droplet should have `python3` installed because `youtube-dl-exec` checks for it during install.
 - Do not commit real cookie values.
 - Any user in the same voice channel as the bot may control playback.
 - Queue state is in-memory and clears on restart.
