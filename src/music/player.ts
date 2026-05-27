@@ -19,14 +19,27 @@ async function sendToMusicChannel(
   }
 }
 
+function errorSummary(error: unknown) {
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+
+  return String(error);
+}
+
 export async function createMusicPlayer(client: Client): Promise<Player> {
   const player = new Player(client, {
     connectionTimeout: 30_000,
     probeTimeout: 15_000,
   });
 
+  console.log(
+    `YouTube cookie configured: ${config.youtubeCookie ? `yes (${config.youtubeCookie.length} chars)` : "no"}.`,
+  );
+
   await player.extractors.register(YoutubeiExtractor, {
     cookie: config.youtubeCookie,
+    ignoreSignInErrors: true,
     streamOptions: {
       highWaterMark: 1 << 24,
     },
@@ -42,7 +55,11 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
   player.events.on("playerError", (queue, error, track) => {
     console.error(`Music player error in ${queue.guild.name} for ${track.title}:`, error);
     void sendToMusicChannel(queue.metadata as MusicMetadata | null, {
-      embeds: [buildErrorEmbed(`I could not play **${track.title}**. YouTube may be blocking this stream.`)],
+      embeds: [
+        buildErrorEmbed(
+          `I could not play **${track.title}**.\n\nReason: \`${errorSummary(error).slice(0, 700)}\``,
+        ),
+      ],
     });
   });
 
