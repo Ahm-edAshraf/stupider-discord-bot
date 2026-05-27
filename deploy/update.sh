@@ -21,7 +21,7 @@ fi
 cd "$APP_DIR"
 
 git pull --ff-only
-"$BUN_BIN" install --production
+"$BUN_BIN" install
 "$BUN_BIN" run check
 "$BUN_BIN" run clear
 "$BUN_BIN" run deploy

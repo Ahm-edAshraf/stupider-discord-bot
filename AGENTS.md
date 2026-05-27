@@ -65,7 +65,7 @@ cd /opt/stupider-discord-bot
 sudo bash deploy/update.sh
 ```
 
-The update script pulls latest code, installs production deps, type-checks,
+The update script pulls latest code, installs all deps, type-checks,
 clears stale commands, deploys current slash commands, and restarts systemd.
 It resolves Bun from `PATH`, `/root/.bun/bin/bun`, or `$HOME/.bun/bin/bun`
 because `sudo` can hide Bun from the shell PATH on the droplet.
