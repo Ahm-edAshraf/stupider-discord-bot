@@ -31,6 +31,7 @@ function errorSummary(error: unknown) {
 
 async function createYoutubeDlStream(track: Track) {
   const baseFlags = {
+    jsRuntimes: "node" as const,
     noWarnings: true,
     noProgress: true,
     quiet: true,
@@ -69,6 +70,7 @@ async function createYoutubeDlStream(track: Track) {
 
   for (const attempt of attempts) {
     try {
+      console.log(`Resolving yt-dlp stream for ${track.title} via ${attempt.name}.`);
       const result = await youtubeDl(track.url, attempt.flags);
       const streamUrl = String(result).trim().split("\n").find(Boolean);
 
@@ -79,11 +81,15 @@ async function createYoutubeDlStream(track: Track) {
 
       errors.push(`${attempt.name}: no stream URL returned`);
     } catch (error) {
-      errors.push(`${attempt.name}: ${errorSummary(error)}`);
+      const message = errorSummary(error);
+      console.error(`yt-dlp stream attempt failed for ${track.title} via ${attempt.name}: ${message}`);
+      errors.push(`${attempt.name}: ${message}`);
     }
   }
 
-  throw new Error(`yt-dlp could not resolve a playable stream. ${errors.join(" | ").slice(0, 1_000)}`);
+  const message = `yt-dlp could not resolve a playable stream. ${errors.join(" | ").slice(0, 1_000)}`;
+  console.error(message);
+  throw new Error(message);
 }
 
 export async function createMusicPlayer(client: Client): Promise<Player> {
