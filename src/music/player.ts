@@ -30,6 +30,10 @@ function errorSummary(error: unknown) {
 }
 
 async function createYoutubeDlStream(track: Track) {
+  const format = track.live
+    ? "best[protocol^=http]/best"
+    : "bestaudio[protocol^=http]/best[protocol^=http]/best*/best";
+
   const baseFlags = {
     jsRuntimes: "node" as const,
     noWarnings: true,
@@ -44,7 +48,7 @@ async function createYoutubeDlStream(track: Track) {
       flags: {
         ...baseFlags,
         cookies: config.youtubeCookiesFile,
-        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+        format,
       },
     },
     {
@@ -53,7 +57,25 @@ async function createYoutubeDlStream(track: Track) {
         ...baseFlags,
         cookies: config.youtubeCookiesFile,
         extractorArgs: "youtube:player_client=mweb,web_safari",
-        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+        format,
+      },
+    },
+    {
+      name: "cookies web missing pot",
+      flags: {
+        ...baseFlags,
+        cookies: config.youtubeCookiesFile,
+        extractorArgs: "youtube:player_client=web,web_safari;formats=missing_pot",
+        format,
+      },
+    },
+    {
+      name: "cookies tv",
+      flags: {
+        ...baseFlags,
+        cookies: config.youtubeCookiesFile,
+        extractorArgs: "youtube:player_client=tv,tv_embedded,tv_simply",
+        format,
       },
     },
     {
@@ -61,7 +83,7 @@ async function createYoutubeDlStream(track: Track) {
       flags: {
         ...baseFlags,
         extractorArgs: "youtube:player_client=android_vr,web_safari,tv_embedded",
-        format: track.live ? "best[height<=360]/best" : "bestaudio/best",
+        format,
       },
     },
   ];
