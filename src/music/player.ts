@@ -30,12 +30,14 @@ function errorSummary(error: unknown) {
 }
 
 async function createYoutubeDlStream(track: Track) {
+  const jsRuntime = `bun:${process.execPath}` as const;
   const format = track.live
     ? "best[protocol^=http]/best"
     : "bestaudio[protocol^=http]/best[protocol^=http]/best*/best";
 
   const baseFlags = {
-    jsRuntimes: "node" as const,
+    jsRuntimes: jsRuntime,
+    remoteComponents: "ejs:npm",
     noWarnings: true,
     noProgress: true,
     quiet: true,
