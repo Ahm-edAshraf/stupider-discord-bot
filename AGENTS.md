@@ -80,6 +80,7 @@ It also requires either `python3` or `python` before running `bun install`.
 - When `YOUTUBE_COOKIES_FILE` is set, streaming uses `youtube-dl-exec` with `--cookies`.
 - yt-dlp is run with Bun as the JS runtime and `remoteComponents=ejs:npm` for YouTube EJS challenge solving.
 - Stream selection prefers low-bitrate audio-only formats to reduce stutter on the 1 GB droplet.
+- Playback pipes through `yt-dlp` stdout with IPv4/retry/buffer flags instead of returning raw Googlevideo URLs.
 - `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
 - The droplet should have `python3` installed because `youtube-dl-exec` checks for it during install.
 - Do not commit real cookie values.

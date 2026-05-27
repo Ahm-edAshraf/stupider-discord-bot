@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { Player } from "discord-player";
 import type { Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
@@ -36,12 +37,15 @@ async function createYoutubeDlStream(track: Track) {
     : "ba[abr<=96][protocol^=http]/ba[abr<=128][protocol^=http]/ba[abr<=160][protocol^=http]/ba[protocol^=http]/ba";
 
   const baseFlags = {
+    bufferSize: "64K",
+    forceIpv4: true,
+    fragmentRetries: 10,
     jsRuntimes: jsRuntime,
     remoteComponents: "ejs:npm",
     noWarnings: true,
     noProgress: true,
     quiet: true,
-    getUrl: true,
+    retries: 10,
   };
 
   const attempts = [
@@ -95,12 +99,33 @@ async function createYoutubeDlStream(track: Track) {
   for (const attempt of attempts) {
     try {
       console.log(`Resolving yt-dlp stream for ${track.title} via ${attempt.name}.`);
-      const result = await youtubeDl(track.url, attempt.flags);
+      const result = await youtubeDl(track.url, { ...attempt.flags, getUrl: true });
       const streamUrl = String(result).trim().split("\n").find(Boolean);
 
       if (streamUrl) {
         console.log(`yt-dlp stream resolved for ${track.title} via ${attempt.name}.`);
-        return streamUrl;
+        const process = youtubeDl.exec(track.url, { ...attempt.flags, output: "-" });
+
+        process.catch((error) => {
+          console.error(`yt-dlp playback stream failed for ${track.title}:`, error);
+        });
+
+        if (!process.stdout) {
+          throw new Error("yt-dlp did not return an audio stream.");
+        }
+
+        const stream = Readable.from(process.stdout, { highWaterMark: 1 << 20 });
+        const stopProcess = () => {
+          if (!process.killed) {
+            process.kill();
+          }
+        };
+
+        stream.on("close", stopProcess);
+        stream.on("error", stopProcess);
+        stream.on("end", stopProcess);
+
+        return stream;
       }
 
       errors.push(`${attempt.name}: no stream URL returned`);
