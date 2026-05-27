@@ -1,4 +1,4 @@
-# Discord Bot
+# Stupider Discord Bot
 
 Bun + discord.js bot scaffold with slash commands and voice-channel join/leave support.
 
@@ -51,9 +51,12 @@ curl -fsSL https://bun.sh/install | bash
 source ~/.bashrc
 ```
 
-Clone or upload this project, create `.env`, then:
+Clone this project, create `.env`, then:
 
 ```bash
+cd /opt
+git clone https://github.com/Ahm-edAshraf/stupider-discord-bot.git
+cd /opt/stupider-discord-bot
 bun install --production
 bun run deploy
 bun run start
@@ -61,18 +64,24 @@ bun run start
 
 For long-running hosting, use `systemd` or a process manager. `systemd` is preferred on a small droplet.
 
-Example service file at `/etc/systemd/system/discord-bot.service`:
+Copy the included service file:
+
+```bash
+sudo cp /opt/stupider-discord-bot/deploy/stupider-discord-bot.service /etc/systemd/system/stupider-discord-bot.service
+```
+
+Service file contents:
 
 ```ini
 [Unit]
-Description=Discord Bot
+Description=Stupider Discord Bot
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/discord-bot
-EnvironmentFile=/opt/discord-bot/.env
+WorkingDirectory=/opt/stupider-discord-bot
+EnvironmentFile=/opt/stupider-discord-bot/.env
 ExecStart=/root/.bun/bin/bun run start
 Restart=always
 RestartSec=5
@@ -86,8 +95,8 @@ Then:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now discord-bot
-sudo journalctl -u discord-bot -f
+sudo systemctl enable --now stupider-discord-bot
+sudo journalctl -u stupider-discord-bot -f
 ```
 
 ## Music notes

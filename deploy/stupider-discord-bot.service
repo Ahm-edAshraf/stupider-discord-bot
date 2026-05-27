@@ -1,12 +1,12 @@
 [Unit]
-Description=Discord Bot
+Description=Stupider Discord Bot
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/discord-bot
-EnvironmentFile=/opt/discord-bot/.env
+WorkingDirectory=/opt/stupider-discord-bot
+EnvironmentFile=/opt/stupider-discord-bot/.env
 ExecStart=/root/.bun/bin/bun run start
 Restart=always
 RestartSec=5
