@@ -1,0 +1,111 @@
+# AGENTS.md
+
+## Project
+
+This repo is `stupider-discord-bot`, a Bun + discord.js Discord bot.
+
+Current stack:
+
+- Runtime: Bun
+- Language: TypeScript
+- Discord library: `discord.js`
+- Voice support: `@discordjs/voice`
+- Env config: `dotenv`
+- Hosting target: DigitalOcean Ubuntu droplet
+- Droplet app path: `/opt/stupider-discord-bot`
+- systemd service: `stupider-discord-bot`
+
+## User Preferences
+
+- Always commit and push repo changes after completing edits.
+- Keep `.env` and secrets out of git.
+- Use Bun for JS/TS commands.
+- Prefer practical, low-friction deployment steps for the small 1 vCPU / 1 GB RAM droplet.
+- Keep docs and deployment commands updated when behavior changes.
+- Update this file when important project decisions, workflows, or standing instructions change.
+
+## Common Commands
+
+Local/dev:
+
+```bash
+bun install
+bun run check
+bun run deploy
+bun run start
+```
+
+Clear stale Discord slash commands:
+
+```bash
+bun run clear
+bun run deploy
+```
+
+Droplet update:
+
+```bash
+cd /opt/stupider-discord-bot
+sudo bash deploy/update.sh
+```
+
+The update script pulls latest code, installs production deps, type-checks,
+clears stale commands, deploys current slash commands, and restarts systemd.
+
+## Deployment Notes
+
+The systemd service file is:
+
+```text
+deploy/stupider-discord-bot.service
+```
+
+Install it on the droplet with:
+
+```bash
+sudo cp /opt/stupider-discord-bot/deploy/stupider-discord-bot.service /etc/systemd/system/stupider-discord-bot.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now stupider-discord-bot
+```
+
+View logs:
+
+```bash
+sudo journalctl -u stupider-discord-bot -f
+```
+
+## Discord Slash Commands
+
+If Discord shows duplicate or old commands, the likely cause is stale global
+and/or guild command registration. Use:
+
+```bash
+bun run clear
+bun run deploy
+```
+
+With `DISCORD_GUILD_ID` set, guild commands update quickly. Global commands may
+take longer to disappear from Discord's UI.
+
+## Files To Know
+
+- `src/bot.ts`: Discord client startup and interaction handling.
+- `src/commands.ts`: Slash command definitions and handlers.
+- `src/deploy-commands.ts`: Registers current slash commands.
+- `src/clear-commands.ts`: Clears global and configured guild slash commands.
+- `deploy/update.sh`: One-command droplet update script.
+- `deploy/stupider-discord-bot.service`: systemd service file.
+- `.env.example`: Required environment variables template.
+
+## Git Hygiene
+
+- Before committing, check `git status --short`.
+- Commit only intended files.
+- Never commit `.env`, tokens, or `node_modules`.
+- After committing, push to:
+
+```text
+https://github.com/Ahm-edAshraf/stupider-discord-bot.git
+```
+
+Use short Conventional Commit messages.
