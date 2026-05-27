@@ -75,7 +75,8 @@ It also requires either `python3` or `python` before running `bun install`.
 ## Music Notes
 
 - v1 is YouTube-first.
-- `YOUTUBE_COOKIE` is optional and improves reliability when YouTube blocks anonymous droplet playback.
+- `YOUTUBE_COOKIE` is optional and should be a copied YouTube `Cookie:` header value.
+- YouTube streaming uses a custom `youtube-dl-exec` stream so the cookie can be passed as an HTTP header.
 - `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
 - The droplet should have `python3` installed because `youtube-dl-exec` checks for it during install.
 - Do not commit real cookie values.

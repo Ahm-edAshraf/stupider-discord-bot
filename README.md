@@ -51,8 +51,8 @@ Music controls also appear as buttons under the public embeds. Anyone in the
 same voice channel as the bot can use the controls.
 
 YouTube can block anonymous droplet playback. If playback starts failing, set
-`YOUTUBE_COOKIE` in `.env` to a valid YouTube cookie string, then restart the
-service. Keep this value private.
+`YOUTUBE_COOKIE` in `.env` to a copied YouTube `Cookie:` header value, then
+restart the service. Keep this value private.
 
 ## Slash command cleanup
 

@@ -1,6 +1,8 @@
 import { Player } from "discord-player";
+import type { Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
+import youtubeDl from "youtube-dl-exec";
 import { config } from "../config";
 import { buildErrorEmbed, buildNowPlayingEmbed, musicControls } from "./ui";
 
@@ -27,6 +29,41 @@ function errorSummary(error: unknown) {
   return String(error);
 }
 
+async function createYoutubeDlStream(track: Track) {
+  const headers = config.youtubeCookie
+    ? [`Cookie: ${config.youtubeCookie}`, "User-Agent: Mozilla/5.0"]
+    : ["User-Agent: Mozilla/5.0"];
+
+  const process = youtubeDl.exec(track.url, {
+    format: track.live ? "best[height<=360]" : "bestaudio/best",
+    output: "-",
+    addHeader: headers,
+    noWarnings: true,
+    noProgress: true,
+    quiet: true,
+  });
+
+  process.catch((error) => {
+    console.error(`yt-dlp failed for ${track.title}:`, error);
+  });
+
+  if (!process.stdout) {
+    throw new Error("yt-dlp did not return an audio stream.");
+  }
+
+  const stopProcess = () => {
+    if (!process.killed) {
+      process.kill();
+    }
+  };
+
+  process.stdout.on("close", stopProcess);
+  process.stdout.on("error", stopProcess);
+  process.stdout.on("end", stopProcess);
+
+  return process.stdout;
+}
+
 export async function createMusicPlayer(client: Client): Promise<Player> {
   const player = new Player(client, {
     connectionTimeout: 30_000,
@@ -40,6 +77,7 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
   await player.extractors.register(YoutubeiExtractor, {
     cookie: config.youtubeCookie,
     ignoreSignInErrors: true,
+    createStream: createYoutubeDlStream,
     streamOptions: {
       highWaterMark: 1 << 24,
     },
