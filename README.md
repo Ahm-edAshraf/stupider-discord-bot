@@ -67,12 +67,17 @@ AI admin commands require `Manage Server`:
 /ai personality reset
 /ai personality set text:<summary>
 /ai cap daily:<number>
+/ai backfill limit:<optional max messages>
 /ai purge
 ```
 
 When AI is enabled, it replies to every eligible human message until the server
 daily cap or global token cap is hit. Bot messages, webhooks, DMs, empty messages,
 and very long messages are ignored.
+
+To seed old context, run `/ai backfill` in a text channel. It imports existing
+human messages from that channel into the local SQLite memory, up to the optional
+limit. The bot needs `View Channel` and `Read Message History` permissions.
 
 ## Music commands
 

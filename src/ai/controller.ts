@@ -1,4 +1,4 @@
-import type { Message } from "discord.js";
+import type { Collection, Message, Snowflake } from "discord.js";
 import { config } from "../config";
 import { AiDatabase } from "./db";
 import { callGroq, GroqRateLimitError } from "./groq";
@@ -106,6 +106,7 @@ export class AiController {
     this.db.saveMessage({
       guildId,
       channelId: message.channelId,
+      messageId: message.id,
       userId: message.author.id,
       username: message.member?.displayName ?? message.author.username,
       content,
@@ -164,6 +165,66 @@ export class AiController {
       ready: this.ready,
       pausedUntil: this.pausedUntil,
     };
+  }
+
+  async backfillChannel(input: {
+    guildId: string;
+    channelId: string;
+    fetchMessages: (options: { limit: number; before?: Snowflake }) => Promise<Collection<Snowflake, Message>>;
+    limit: number;
+  }) {
+    let before: Snowflake | undefined;
+    let scanned = 0;
+    let imported = 0;
+
+    while (scanned < input.limit) {
+      const batchLimit = Math.min(100, input.limit - scanned);
+      const messages = await input.fetchMessages({ limit: batchLimit, before });
+
+      if (messages.size === 0) {
+        break;
+      }
+
+      const orderedMessages = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      before = orderedMessages[0]?.id;
+
+      for (const message of orderedMessages) {
+        scanned += 1;
+
+        if (message.author.bot || message.webhookId || !message.inGuild()) {
+          continue;
+        }
+
+        const content = message.content.trim();
+        if (!content || content.length > config.ai.maxMessageLength) {
+          continue;
+        }
+
+        const saved = this.db.saveMessage({
+          guildId: input.guildId,
+          channelId: input.channelId,
+          messageId: message.id,
+          userId: message.author.id,
+          username: message.member?.displayName ?? message.author.username,
+          content,
+          createdAt: message.createdTimestamp,
+        });
+
+        if (saved) {
+          imported += 1;
+        }
+      }
+
+      if (messages.size < batchLimit) {
+        break;
+      }
+    }
+
+    if (imported > 0 && this.db.shouldSummarize(input.guildId, summaryThreshold)) {
+      void this.updatePersonality(input.guildId, input.channelId);
+    }
+
+    return { scanned, imported };
   }
 
   private async updatePersonality(guildId: string, channelId: string) {

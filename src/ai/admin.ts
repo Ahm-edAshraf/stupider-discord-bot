@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction } from "discord.js";
+import type { ChatInputCommandInteraction, Collection, Message, Snowflake } from "discord.js";
 import { PermissionsBitField } from "discord.js";
 import type { BotContext } from "../context";
 
@@ -20,6 +20,19 @@ function requireManageGuild(interaction: ChatInputCommandInteraction) {
   }
 
   return interaction.member.permissions.has(PermissionsBitField.Flags.ManageGuild);
+}
+
+function getMessageFetcher(interaction: ChatInputCommandInteraction) {
+  const channel = interaction.channel;
+
+  if (!channel || !("messages" in channel)) {
+    return null;
+  }
+
+  return channel.messages.fetch.bind(channel.messages) as (options: {
+    limit: number;
+    before?: Snowflake;
+  }) => Promise<Collection<Snowflake, Message>>;
 }
 
 export async function handleAiCommand(interaction: ChatInputCommandInteraction, context: BotContext) {
@@ -98,6 +111,33 @@ export async function handleAiCommand(interaction: ChatInputCommandInteraction, 
     const dailyCap = interaction.options.getInteger("daily", true);
     ai.db.setGuildDailyCap(interaction.guildId, dailyCap);
     await reply(interaction, `AI daily reply cap set to ${dailyCap}.`);
+    return;
+  }
+
+  if (subcommand === "backfill") {
+    const fetchMessages = getMessageFetcher(interaction);
+    if (!fetchMessages) {
+      await reply(interaction, "This channel does not support message history backfill.");
+      return;
+    }
+
+    const limit = interaction.options.getInteger("limit") ?? 500;
+    await interaction.deferReply({ ephemeral: true });
+    try {
+      const result = await ai.backfillChannel({
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        fetchMessages,
+        limit,
+      });
+
+      await interaction.editReply(
+        `Backfill complete. Scanned ${result.scanned} messages and imported ${result.imported} new human messages from this channel.`,
+      );
+    } catch (error) {
+      console.error("AI backfill failed:", error);
+      await interaction.editReply("Backfill failed. Check that the bot has View Channel and Read Message History permissions.");
+    }
     return;
   }
 

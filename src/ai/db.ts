@@ -47,26 +47,32 @@ export class AiDatabase {
   saveMessage(input: {
     guildId: string;
     channelId: string;
+    messageId?: string;
     userId: string;
     username: string;
     content: string;
     createdAt: number;
-  }) {
-    this.db
+  }): boolean {
+    const result = this.db
       .query(
-        `insert into ai_messages
-          (guild_id, channel_id, user_id, username, content, created_at)
+        `insert or ignore into ai_messages
+          (guild_id, channel_id, message_id, user_id, username, content, created_at)
          values
-          ($guildId, $channelId, $userId, $username, $content, $createdAt)`,
+          ($guildId, $channelId, $messageId, $userId, $username, $content, $createdAt)`,
       )
       .run({
         $guildId: input.guildId,
         $channelId: input.channelId,
+        $messageId: input.messageId ?? null,
         $userId: input.userId,
         $username: input.username,
         $content: input.content,
         $createdAt: input.createdAt,
       });
+
+    if (result.changes < 1) {
+      return false;
+    }
 
     this.db
       .query(
@@ -76,6 +82,8 @@ export class AiDatabase {
           messages_since_summary = messages_since_summary + 1`,
       )
       .run({ $guildId: input.guildId });
+
+    return true;
   }
 
   getRecentMessages(guildId: string, channelId: string, limit: number): RecentMessage[] {
@@ -279,6 +287,7 @@ export class AiDatabase {
         id integer primary key autoincrement,
         guild_id text not null,
         channel_id text not null,
+        message_id text,
         user_id text not null,
         username text not null,
         content text not null,
@@ -320,6 +329,19 @@ export class AiDatabase {
         total_tokens integer not null default 0,
         primary key (day, guild_id)
       );
+    `);
+
+    const columns = this.db
+      .query<{ name: string }, []>(`pragma table_info(ai_messages)`)
+      .all();
+    if (!columns.some((column) => column.name === "message_id")) {
+      this.db.exec(`alter table ai_messages add column message_id text;`);
+    }
+
+    this.db.exec(`
+      create unique index if not exists ai_messages_discord_message_idx
+        on ai_messages (guild_id, channel_id, message_id)
+        where message_id is not null;
     `);
   }
 }

@@ -108,6 +108,7 @@ It also requires either `python3` or `python` before running `bun install`.
 - Default behavior is aggressive friend-server replies until caps are reached.
 - Default cap is `AI_DAILY_REPLY_CAP_PER_GUILD=300`; global token cap is `AI_GLOBAL_DAILY_TOKEN_CAP=450000`.
 - AI admin commands require Manage Server permission.
+- `/ai backfill` imports old messages from the current text channel into SQLite memory.
 - AI personality should be chaotic and roast-y, but avoid protected-class slurs, real threats, sexual content involving minors, self-harm encouragement, and private info leaks.
 
 ## Deployment Notes

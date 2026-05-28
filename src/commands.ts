@@ -246,6 +246,18 @@ const ai: BotCommand = {
     )
     .addSubcommand((subcommand) =>
       subcommand
+        .setName("backfill")
+        .setDescription("Import old messages from this channel into AI memory.")
+        .addIntegerOption((option) =>
+          option
+            .setName("limit")
+            .setDescription("Maximum old messages to scan.")
+            .setMinValue(1)
+            .setMaxValue(5_000),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
         .setName("purge")
         .setDescription("Delete this server's AI memory and settings."),
     ),
