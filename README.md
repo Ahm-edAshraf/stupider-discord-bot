@@ -59,9 +59,9 @@ YouTube can block anonymous droplet playback. If playback starts failing, export
 YouTube cookies in Netscape format to a file on the droplet and set
 `YOUTUBE_COOKIES_FILE` in `.env`. Keep cookie values private.
 The bot uses `yt-dlp --cookies` to download a temporary audio file before
-playback. WebM/Opus downloads are played as Opus without FFmpeg when possible;
-other formats fall back to FFmpeg from the local file. Temporary files are
-deleted after the track finishes, errors, skips, or the queue is deleted.
+playback, then plays the local file through the standard Discord Player/FFmpeg
+path. Temporary files are deleted after the track finishes, errors, skips, or
+the queue is deleted.
 
 Recommended droplet cookie setup:
 

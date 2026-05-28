@@ -1,8 +1,7 @@
-import { Player, StreamType } from "discord-player";
+import { Player } from "discord-player";
 import type { ExtractorStreamable, Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
-import { createReadStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -129,10 +128,7 @@ async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable>
             {
               name: `${client.name} webm`,
               file: webmFile,
-              createStream: () => ({
-                $fmt: StreamType.WebmOpus,
-                stream: createReadStream(webmFile),
-              }),
+              createStream: () => webmFile,
               flags: {
                 ...commonFlags,
                 format: webmFormat,
