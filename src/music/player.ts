@@ -2,6 +2,8 @@ import { Player, StreamType } from "discord-player";
 import type { ExtractorStreamable, Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
+import { get as httpGet } from "node:http";
+import { get as httpsGet } from "node:https";
 import { Readable } from "node:stream";
 import youtubeDl from "youtube-dl-exec";
 import { config } from "../config";
@@ -30,6 +32,11 @@ function errorSummary(error: unknown) {
   return String(error);
 }
 
+const streamHeaders = {
+  "User-Agent":
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+};
+
 function isWebmOpusUrl(streamUrl: string) {
   try {
     const url = new URL(streamUrl);
@@ -40,21 +47,42 @@ function isWebmOpusUrl(streamUrl: string) {
   }
 }
 
-async function createWebmOpusStream(streamUrl: string): Promise<ExtractorStreamable> {
-  const response = await fetch(streamUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-    },
+function openNodeReadable(url: string, redirectsLeft = 3): Promise<Readable> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const get = parsedUrl.protocol === "http:" ? httpGet : httpsGet;
+    const request = get(url, { headers: streamHeaders }, (response) => {
+      const status = response.statusCode ?? 0;
+      const redirect = response.headers.location;
+
+      if (status >= 300 && status < 400 && redirect && redirectsLeft > 0) {
+        response.destroy();
+        const redirectUrl = new URL(redirect, url).toString();
+        void openNodeReadable(redirectUrl, redirectsLeft - 1).then(resolve, reject);
+        return;
+      }
+
+      if (status < 200 || status >= 300) {
+        response.resume();
+        reject(new Error(`Googlevideo stream fetch failed with HTTP ${status}.`));
+        return;
+      }
+
+      response.once("error", reject);
+      resolve(response);
+    });
+
+    request.once("error", reject);
+    request.setTimeout(15_000, () => {
+      request.destroy(new Error("Googlevideo stream connection timed out."));
+    });
   });
+}
 
-  if (!response.ok || !response.body) {
-    throw new Error(`Googlevideo stream fetch failed with HTTP ${response.status}.`);
-  }
-
+async function createWebmOpusStream(streamUrl: string): Promise<ExtractorStreamable> {
   return {
     $fmt: StreamType.WebmOpus,
-    stream: Readable.fromWeb(response.body as unknown as Parameters<typeof Readable.fromWeb>[0]),
+    stream: await openNodeReadable(streamUrl),
   };
 }
 
