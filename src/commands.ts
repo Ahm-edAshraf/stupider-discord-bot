@@ -3,9 +3,11 @@ import {
   GuildMember,
   SlashCommandOptionsOnlyBuilder,
   SlashCommandBuilder,
+  SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
 import { getVoiceConnection, joinVoiceChannel } from "@discordjs/voice";
-import type { MusicContext } from "./music/actions";
+import { handleAiCommand } from "./ai/admin";
+import type { BotContext } from "./context";
 import {
   pauseMusic,
   playMusic,
@@ -18,8 +20,8 @@ import {
 } from "./music/actions";
 
 export type BotCommand = {
-  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
-  execute: (interaction: ChatInputCommandInteraction, context: MusicContext) => Promise<void>;
+  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
+  execute: (interaction: ChatInputCommandInteraction, context: BotContext) => Promise<void>;
 };
 
 const ping: BotCommand = {
@@ -163,6 +165,95 @@ const volume: BotCommand = {
   },
 };
 
+const ai: BotCommand = {
+  data: new SlashCommandBuilder()
+    .setName("ai")
+    .setDescription("Manage AI chat behavior.")
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("enable")
+        .setDescription("Enable AI chat for this server or channel.")
+        .addStringOption((option) =>
+          option
+            .setName("scope")
+            .setDescription("Where to enable AI chat.")
+            .setRequired(true)
+            .addChoices(
+              { name: "server", value: "server" },
+              { name: "channel", value: "channel" },
+            ),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("disable")
+        .setDescription("Disable AI chat for this server or channel.")
+        .addStringOption((option) =>
+          option
+            .setName("scope")
+            .setDescription("Where to disable AI chat.")
+            .setRequired(true)
+            .addChoices(
+              { name: "server", value: "server" },
+              { name: "channel", value: "channel" },
+            ),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("stats")
+        .setDescription("Show AI usage and quota status."),
+    )
+    .addSubcommandGroup((group) =>
+      group
+        .setName("personality")
+        .setDescription("Manage the learned AI personality summary.")
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("show")
+            .setDescription("Show the learned AI personality summary."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("reset")
+            .setDescription("Reset the learned AI personality summary."),
+        )
+        .addSubcommand((subcommand) =>
+          subcommand
+            .setName("set")
+            .setDescription("Manually set the AI personality summary.")
+            .addStringOption((option) =>
+              option
+                .setName("text")
+                .setDescription("New personality summary.")
+                .setRequired(true)
+                .setMaxLength(1_000),
+            ),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("cap")
+        .setDescription("Set this server's daily AI reply cap.")
+        .addIntegerOption((option) =>
+          option
+            .setName("daily")
+            .setDescription("Daily AI reply cap.")
+            .setMinValue(1)
+            .setMaxValue(5_000)
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName("purge")
+        .setDescription("Delete this server's AI memory and settings."),
+    ),
+  async execute(interaction, context) {
+    await handleAiCommand(interaction, context);
+  },
+};
+
 const leave: BotCommand = {
   data: new SlashCommandBuilder()
     .setName("leave")
@@ -204,5 +295,6 @@ export const commands = [
   skip,
   stop,
   volume,
+  ai,
 ];
 export const commandMap = new Map(commands.map((command) => [command.data.name, command]));

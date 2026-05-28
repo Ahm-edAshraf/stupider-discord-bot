@@ -14,6 +14,8 @@ Current stack:
 - YouTube extractor: `discord-player-youtubei`
 - YouTube helper binary package: `youtube-dl-exec`
 - Env config: `dotenv`
+- AI provider: Groq chat completions API
+- AI memory: Bun SQLite at `AI_DB_PATH`
 - Hosting target: DigitalOcean Ubuntu droplet
 - Droplet app path: `/opt/stupider-discord-bot`
 - systemd service: `stupider-discord-bot`
@@ -53,6 +55,7 @@ Music slash commands:
 /volume
 /join
 /leave
+/ai
 ```
 
 Clear stale Discord slash commands:
@@ -93,6 +96,19 @@ It also requires either `python3` or `python` before running `bun install`.
 - Do not commit real cookie values.
 - Any user in the same voice channel as the bot may control playback.
 - Queue state is in-memory and clears on restart.
+
+## AI Notes
+
+- AI chat is optional and disabled unless `AI_ENABLED=true` and `GROQ_API_KEY` are set.
+- The bot requires Discord's privileged Message Content Intent for normal chat replies.
+- v1 uses Groq only, defaulting to `llama-3.1-8b-instant`.
+- AI memory is local SQLite at `AI_DB_PATH`, default `./data/ai.sqlite`.
+- `data/` is ignored and must not be committed.
+- Raw AI chat messages are retained for `AI_MESSAGE_RETENTION_DAYS`, default 30 days.
+- Default behavior is aggressive friend-server replies until caps are reached.
+- Default cap is `AI_DAILY_REPLY_CAP_PER_GUILD=300`; global token cap is `AI_GLOBAL_DAILY_TOKEN_CAP=450000`.
+- AI admin commands require Manage Server permission.
+- AI personality should be chaotic and roast-y, but avoid protected-class slurs, real threats, sexual content involving minors, self-harm encouragement, and private info leaks.
 
 ## Deployment Notes
 
@@ -149,6 +165,7 @@ by default, sets `chmod 600`, and can restart the systemd service.
 - `src/bot.ts`: Discord client startup and interaction handling.
 - `src/commands.ts`: Slash command definitions and handlers.
 - `src/music/`: Music player setup, embeds, controls, and playback actions.
+- `src/ai/`: AI chat controller, Groq client, SQLite memory, and admin command helpers.
 - `src/deploy-commands.ts`: Registers current slash commands.
 - `src/clear-commands.ts`: Clears global and configured guild slash commands.
 - `deploy/update.sh`: One-command droplet update script.

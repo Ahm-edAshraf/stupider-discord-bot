@@ -1,11 +1,17 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
+import { AiController } from "./ai/controller";
 import { commandMap } from "./commands";
 import { config } from "./config";
 import { handleMusicButton } from "./music/actions";
 import { createMusicPlayer } from "./music/player";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 client.once(Events.ClientReady, (readyClient) => {
@@ -13,7 +19,8 @@ client.once(Events.ClientReady, (readyClient) => {
 });
 
 const player = await createMusicPlayer(client);
-const context = { player };
+const ai = new AiController();
+const context = { player, ai };
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isButton() && interaction.customId.startsWith("music:")) {
@@ -63,6 +70,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } else {
       await interaction.reply(response);
     }
+  }
+});
+
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    await ai.handleMessage(message);
+  } catch (error) {
+    console.error("AI message handler failed:", error);
   }
 });
 

@@ -11,6 +11,7 @@ Bun + discord.js bot scaffold with slash commands and voice-channel join/leave s
    - optional `DISCORD_GUILD_ID` or comma-separated `DISCORD_GUILD_IDS` for fast development command deploys
    - optional `YOUTUBE_COOKIE` for YouTube metadata sign-in
    - optional `YOUTUBE_COOKIES_FILE` for more reliable `yt-dlp` playback
+   - optional `GROQ_API_KEY` and `AI_ENABLED=true` for AI chat replies
 3. Install dependencies:
 
 ```bash
@@ -30,6 +31,48 @@ bun run start
 ```
 
 Use `bun run dev` while editing locally.
+
+## AI chat
+
+The bot can watch normal server messages and reply with a short chaotic friend-server
+personality. This mode is disabled unless both `AI_ENABLED=true` and `GROQ_API_KEY`
+are set.
+
+Required Discord Developer Portal setting:
+
+- Bot page -> Privileged Gateway Intents -> enable `Message Content Intent`
+
+Useful `.env` values:
+
+```env
+AI_ENABLED=true
+GROQ_API_KEY=your_groq_key_here
+AI_MODEL=llama-3.1-8b-instant
+AI_DB_PATH=./data/ai.sqlite
+AI_DAILY_REPLY_CAP_PER_GUILD=300
+AI_GLOBAL_DAILY_TOKEN_CAP=450000
+```
+
+AI memory uses a local SQLite database at `AI_DB_PATH`. Raw messages are retained
+for `AI_MESSAGE_RETENTION_DAYS` days, 30 by default, and the learned server
+personality is kept as a compact summary.
+
+AI admin commands require `Manage Server`:
+
+```text
+/ai enable scope:<server|channel>
+/ai disable scope:<server|channel>
+/ai stats
+/ai personality show
+/ai personality reset
+/ai personality set text:<summary>
+/ai cap daily:<number>
+/ai purge
+```
+
+When AI is enabled, it replies to every eligible human message until the server
+daily cap or global token cap is hit. Bot messages, webhooks, DMs, empty messages,
+and very long messages are ignored.
 
 ## Music commands
 
@@ -125,6 +168,9 @@ Use OAuth2 URL Generator with:
 
 - Scopes: `bot`, `applications.commands`
 - Bot permissions: `Send Messages`, `Use Slash Commands`, `Embed Links`, `Connect`, `Speak`
+
+If AI chat is enabled, also enable the privileged `Message Content Intent` on the
+Bot page so discord.js can receive normal message text.
 
 ## DigitalOcean droplet
 
