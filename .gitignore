@@ -1,3 +1,6 @@
 .env
 node_modules/
 *.log
+cookies.txt
+youtube.cookies.txt
+*.cookies.txt

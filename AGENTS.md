@@ -37,6 +37,7 @@ bun install
 bun run check
 bun run deploy
 bun run start
+bun run sync:cookies -- -RestartService
 ```
 
 Music slash commands:
@@ -127,6 +128,21 @@ bun run deploy
 
 With `DISCORD_GUILD_ID` set, guild commands update quickly. Global commands may
 take longer to disappear from Discord's UI.
+Use `DISCORD_GUILD_IDS` for multiple comma-separated guild IDs. `DISCORD_GUILD_ID`
+still works for one guild and is included with `DISCORD_GUILD_IDS` when both are set.
+
+## Cookie Sync
+
+Cookies must still be exported from a browser/extension in Netscape format, but
+`deploy/sync-cookies.ps1` automates local copy and droplet upload. Configure
+`YOUTUBE_COOKIES_FILE` and `STUPIDER_DROPLET_HOST`, then run:
+
+```bash
+bun run sync:cookies -- -RestartService
+```
+
+The script uses `scp`/`ssh`, updates `/opt/stupider-discord-bot/youtube.cookies.txt`
+by default, sets `chmod 600`, and can restart the systemd service.
 
 ## Files To Know
 
@@ -136,6 +152,7 @@ take longer to disappear from Discord's UI.
 - `src/deploy-commands.ts`: Registers current slash commands.
 - `src/clear-commands.ts`: Clears global and configured guild slash commands.
 - `deploy/update.sh`: One-command droplet update script.
+- `deploy/sync-cookies.ps1`: Local helper to copy Netscape cookies to the droplet.
 - `deploy/stupider-discord-bot.service`: systemd service file.
 - `.env.example`: Required environment variables template.
 

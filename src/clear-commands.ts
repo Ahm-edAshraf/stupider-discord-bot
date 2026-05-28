@@ -10,13 +10,15 @@ async function clearCommands(scope: string, route: `/${string}`) {
 
 await clearCommands("global", Routes.applicationCommands(config.clientId));
 
-if (config.guildId) {
-  await clearCommands(
-    `guild ${config.guildId}`,
-    Routes.applicationGuildCommands(config.clientId, config.guildId),
-  );
+if (config.guildIds.length > 0) {
+  for (const guildId of config.guildIds) {
+    await clearCommands(
+      `guild ${guildId}`,
+      Routes.applicationGuildCommands(config.clientId, guildId),
+    );
+  }
 } else {
-  console.log("No DISCORD_GUILD_ID set, skipped guild slash commands.");
+  console.log("No DISCORD_GUILD_IDS or DISCORD_GUILD_ID set, skipped guild slash commands.");
 }
 
 console.log("Run `bun run deploy` to register the current commands again.");

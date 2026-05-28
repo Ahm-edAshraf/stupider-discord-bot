@@ -10,10 +10,18 @@ function requiredEnv(name: string): string {
   return value;
 }
 
+function optionalEnvList(...names: string[]): string[] {
+  const values = names.flatMap((name) => process.env[name]?.split(",") ?? []);
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+const guildIds = optionalEnvList("DISCORD_GUILD_IDS", "DISCORD_GUILD_ID");
+
 export const config = {
   token: requiredEnv("DISCORD_TOKEN"),
   clientId: requiredEnv("DISCORD_CLIENT_ID"),
-  guildId: process.env.DISCORD_GUILD_ID?.trim() || undefined,
+  guildId: guildIds[0],
+  guildIds,
   youtubeCookie: process.env.YOUTUBE_COOKIE?.trim() || undefined,
   youtubeCookiesFile: process.env.YOUTUBE_COOKIES_FILE?.trim() || undefined,
 };

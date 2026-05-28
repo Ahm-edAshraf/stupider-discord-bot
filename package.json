@@ -8,6 +8,7 @@
     "start": "bun src/bot.ts",
     "deploy": "bun src/deploy-commands.ts",
     "clear": "bun src/clear-commands.ts",
+    "sync:cookies": "powershell -ExecutionPolicy Bypass -File deploy/sync-cookies.ps1",
     "check": "tsc --noEmit"
   },
   "dependencies": {

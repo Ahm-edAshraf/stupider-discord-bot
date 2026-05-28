@@ -8,7 +8,7 @@ Bun + discord.js bot scaffold with slash commands and voice-channel join/leave s
 2. Fill in:
    - `DISCORD_TOKEN`
    - `DISCORD_CLIENT_ID`
-   - optional `DISCORD_GUILD_ID` for fast development command deploys
+   - optional `DISCORD_GUILD_ID` or comma-separated `DISCORD_GUILD_IDS` for fast development command deploys
    - optional `YOUTUBE_COOKIE` for YouTube metadata sign-in
    - optional `YOUTUBE_COOKIES_FILE` for more reliable `yt-dlp` playback
 3. Install dependencies:
@@ -86,8 +86,34 @@ bun run clear
 bun run deploy
 ```
 
-With `DISCORD_GUILD_ID` set, this clears both global commands and that server's
-commands. Old global commands can take a while to disappear from Discord's UI.
+With `DISCORD_GUILD_ID` or `DISCORD_GUILD_IDS` set, this clears global commands
+and each configured server's commands. Old global commands can take a while to
+disappear from Discord's UI.
+
+## Cookie sync helper
+
+Cookies still have to come from a browser session or extension export, but the
+copy step can be automated. Export Netscape-format cookies to your local
+`YOUTUBE_COOKIES_FILE`, set the droplet host in `.env`, then run:
+
+```bash
+bun run sync:cookies -- -RestartService
+```
+
+Useful `.env` values for the helper:
+
+```env
+YOUTUBE_COOKIES_FILE=D:\path\to\youtube.cookies.txt
+STUPIDER_DROPLET_HOST=discord-bot-sgp1
+STUPIDER_DROPLET_USER=root
+STUPIDER_REMOTE_COOKIES_FILE=/opt/stupider-discord-bot/youtube.cookies.txt
+```
+
+If the extension exports somewhere else, pass that file explicitly:
+
+```bash
+bun run sync:cookies -- -SourceCookiesFile D:\Downloads\cookies.txt -RestartService
+```
 
 ## Discord developer portal
 
