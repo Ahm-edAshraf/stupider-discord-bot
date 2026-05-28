@@ -2,9 +2,11 @@ import { Player, StreamType } from "discord-player";
 import type { ExtractorStreamable, Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
-import { get as httpGet } from "node:http";
-import { get as httpsGet } from "node:https";
-import { Readable } from "node:stream";
+import { createReadStream } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Readable } from "node:stream";
 import youtubeDl from "youtube-dl-exec";
 import { config } from "../config";
 import { buildErrorEmbed, buildNowPlayingEmbed, musicControls } from "./ui";
@@ -32,75 +34,69 @@ function errorSummary(error: unknown) {
   return String(error);
 }
 
-const streamHeaders = {
-  "User-Agent":
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-};
+const tempPathsByTrack = new Map<string, string[]>();
 
-function isWebmOpusUrl(streamUrl: string) {
-  try {
-    const url = new URL(streamUrl);
-    const mime = url.searchParams.get("mime")?.toLowerCase() ?? "";
-    return mime === "audio/webm" || mime.includes("webm");
-  } catch {
-    return false;
+function addTempPath(track: Track, path: string) {
+  const paths = tempPathsByTrack.get(track.id) ?? [];
+  paths.push(path);
+  tempPathsByTrack.set(track.id, paths);
+}
+
+async function cleanupTrackTempFiles(track: Track) {
+  const paths = tempPathsByTrack.get(track.id) ?? [];
+  tempPathsByTrack.delete(track.id);
+
+  await Promise.allSettled(
+    paths.map(async (path) => {
+      await rm(path, { force: true, recursive: true });
+      console.log(`Deleted temp music file: ${path}`);
+    }),
+  );
+}
+
+async function cleanupAllTempFiles() {
+  const tracks = [...tempPathsByTrack.keys()];
+  const paths = [...tempPathsByTrack.values()].flat();
+  tempPathsByTrack.clear();
+
+  await Promise.allSettled(
+    paths.map(async (path) => {
+      await rm(path, { force: true, recursive: true });
+      console.log(`Deleted temp music file: ${path}`);
+    }),
+  );
+
+  if (tracks.length > 0) {
+    console.log(`Cleaned temp files for ${tracks.length} track(s).`);
   }
-}
-
-function openNodeReadable(url: string, redirectsLeft = 3): Promise<Readable> {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url);
-    const get = parsedUrl.protocol === "http:" ? httpGet : httpsGet;
-    const request = get(url, { headers: streamHeaders }, (response) => {
-      const status = response.statusCode ?? 0;
-      const redirect = response.headers.location;
-
-      if (status >= 300 && status < 400 && redirect && redirectsLeft > 0) {
-        response.destroy();
-        const redirectUrl = new URL(redirect, url).toString();
-        void openNodeReadable(redirectUrl, redirectsLeft - 1).then(resolve, reject);
-        return;
-      }
-
-      if (status < 200 || status >= 300) {
-        response.resume();
-        reject(new Error(`Googlevideo stream fetch failed with HTTP ${status}.`));
-        return;
-      }
-
-      response.once("error", reject);
-      resolve(response);
-    });
-
-    request.once("error", reject);
-    request.setTimeout(15_000, () => {
-      request.destroy(new Error("Googlevideo stream connection timed out."));
-    });
-  });
-}
-
-async function createWebmOpusStream(streamUrl: string): Promise<ExtractorStreamable> {
-  return {
-    $fmt: StreamType.WebmOpus,
-    stream: await openNodeReadable(streamUrl),
-  };
 }
 
 async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable> {
   const jsRuntime = `bun:${process.execPath}` as const;
-  const format = track.live
+  const tempDir = await mkdtemp(join(tmpdir(), "stupider-music-"));
+  const webmFile = join(tempDir, "audio.webm");
+  const fallbackFile = join(tempDir, "audio");
+  addTempPath(track, tempDir);
+
+  const webmFormat = track.live
+    ? null
+    : [
+        "ba[ext=webm][abr<=96]",
+        "ba[ext=webm][abr<=128]",
+        "ba[ext=webm][abr<=160]",
+        "ba[ext=webm]",
+      ].join("/");
+  const fallbackFormat = track.live
     ? "worst[protocol^=http]/best[protocol^=http]/best"
     : [
-        "ba[acodec=opus][ext=webm][abr<=96][protocol^=http]",
-        "ba[acodec=opus][ext=webm][abr<=128][protocol^=http]",
-        "ba[acodec=opus][ext=webm][abr<=160][protocol^=http]",
-        "ba[acodec=opus][ext=webm][protocol^=http]",
-        "ba[ext=webm][protocol^=http]",
+        "ba[abr<=96][protocol^=http]",
+        "ba[abr<=128][protocol^=http]",
+        "ba[abr<=160][protocol^=http]",
         "ba[protocol^=http]",
+        "ba",
       ].join("/");
 
   const baseFlags = {
-    bufferSize: "64K",
     forceIpv4: true,
     fragmentRetries: 10,
     jsRuntimes: jsRuntime,
@@ -109,89 +105,73 @@ async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable>
     noProgress: true,
     quiet: true,
     retries: 10,
+    noPlaylist: true,
   };
 
-  const attempts = [
-    {
-      name: "cookies default",
-      flags: {
-        ...baseFlags,
-        cookies: config.youtubeCookiesFile,
-        format,
-      },
-    },
-    {
-      name: "cookies mweb",
-      flags: {
-        ...baseFlags,
-        cookies: config.youtubeCookiesFile,
-        extractorArgs: "youtube:player_client=mweb,web_safari",
-        format,
-      },
-    },
-    {
-      name: "cookies web missing pot",
-      flags: {
-        ...baseFlags,
-        cookies: config.youtubeCookiesFile,
-        extractorArgs: "youtube:player_client=web,web_safari;formats=missing_pot",
-        format,
-      },
-    },
-    {
-      name: "cookies tv",
-      flags: {
-        ...baseFlags,
-        cookies: config.youtubeCookiesFile,
-        extractorArgs: "youtube:player_client=tv,tv_embedded,tv_simply",
-        format,
-      },
-    },
-    {
-      name: "guest mobile clients",
-      flags: {
-        ...baseFlags,
-        extractorArgs: "youtube:player_client=android_vr,web_safari,tv_embedded",
-        format,
-      },
-    },
+  const clients = [
+    { name: "default", extractorArgs: undefined },
+    { name: "mweb", extractorArgs: "youtube:player_client=mweb,web_safari" },
+    { name: "web missing pot", extractorArgs: "youtube:player_client=web,web_safari;formats=missing_pot" },
+    { name: "tv", extractorArgs: "youtube:player_client=tv,tv_embedded,tv_simply" },
+    { name: "guest mobile", extractorArgs: "youtube:player_client=android_vr,web_safari,tv_embedded" },
   ];
+
+  const attempts = clients.flatMap((client) => {
+    const commonFlags = {
+      ...baseFlags,
+      cookies: config.youtubeCookiesFile,
+      ...(client.extractorArgs ? { extractorArgs: client.extractorArgs } : {}),
+    };
+
+    return [
+      ...(webmFormat
+        ? [
+            {
+              name: `${client.name} webm`,
+              file: webmFile,
+              createStream: () => ({
+                $fmt: StreamType.WebmOpus,
+                stream: createReadStream(webmFile),
+              }),
+              flags: {
+                ...commonFlags,
+                format: webmFormat,
+                output: webmFile,
+              },
+            },
+          ]
+        : []),
+      {
+        name: `${client.name} fallback`,
+        file: fallbackFile,
+        createStream: () => fallbackFile,
+        flags: {
+          ...commonFlags,
+          format: fallbackFormat,
+          output: fallbackFile,
+        },
+      },
+    ];
+  });
 
   const errors: string[] = [];
 
   for (const attempt of attempts) {
     try {
-      console.log(`Resolving yt-dlp stream for ${track.title} via ${attempt.name}.`);
-      const result = await youtubeDl(track.url, { ...attempt.flags, getUrl: true });
-      const streamUrl = String(result).trim().split("\n").find(Boolean);
-
-      if (streamUrl) {
-        console.log(`yt-dlp stream URL resolved for ${track.title} via ${attempt.name}.`);
-        if (isWebmOpusUrl(streamUrl)) {
-          try {
-            const stream = await createWebmOpusStream(streamUrl);
-            console.log(`Using WebM Opus passthrough for ${track.title}.`);
-            return stream;
-          } catch (error) {
-            console.error(
-              `WebM Opus passthrough failed for ${track.title}; falling back to FFmpeg: ${errorSummary(error)}`,
-            );
-          }
-        }
-
-        console.log(`Resolved stream for ${track.title} is not WebM Opus; falling back to FFmpeg.`);
-        return streamUrl;
-      }
-
-      errors.push(`${attempt.name}: no stream URL returned`);
+      console.log(`Downloading temp audio for ${track.title} via ${attempt.name}.`);
+      await youtubeDl(track.url, attempt.flags);
+      console.log(`Downloaded temp audio for ${track.title} via ${attempt.name}: ${attempt.file}`);
+      return attempt.createStream();
     } catch (error) {
       const message = errorSummary(error);
-      console.error(`yt-dlp stream attempt failed for ${track.title} via ${attempt.name}: ${message}`);
+      console.error(`yt-dlp download attempt failed for ${track.title} via ${attempt.name}: ${message}`);
       errors.push(`${attempt.name}: ${message}`);
     }
   }
 
-  const message = `yt-dlp could not resolve a playable stream URL. ${errors.join(" | ").slice(0, 1_000)}`;
+  await cleanupTrackTempFiles(track);
+
+  const message = `yt-dlp could not download a playable temp audio file. ${errors.join(" | ").slice(0, 1_000)}`;
   console.error(message);
   throw new Error(message);
 }
@@ -233,6 +213,7 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
 
   player.events.on("playerError", (queue, error, track) => {
     console.error(`Music player error in ${queue.guild.name} for ${track.title}:`, error);
+    void cleanupTrackTempFiles(track);
     void sendToMusicChannel(queue.metadata as MusicMetadata | null, {
       embeds: [
         buildErrorEmbed(
@@ -240,6 +221,18 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
         ),
       ],
     });
+  });
+
+  player.events.on("playerFinish", (_queue, track) => {
+    void cleanupTrackTempFiles(track);
+  });
+
+  player.events.on("playerSkip", (_queue, track) => {
+    void cleanupTrackTempFiles(track);
+  });
+
+  player.events.on("queueDelete", () => {
+    void cleanupAllTempFiles();
   });
 
   player.events.on("playerStart", (queue, track) => {

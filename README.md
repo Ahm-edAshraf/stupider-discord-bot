@@ -51,17 +51,17 @@ The bot supports YouTube-first music playback:
 Music controls also appear as buttons under the public embeds. Anyone in the
 same voice channel as the bot can use the controls.
 
-Runtime volume changes are disabled for playback stability. The bot uses
-low-CPU Opus passthrough when YouTube returns WebM/Opus audio, so users should
-adjust Discord's per-user volume instead of using `/volume`.
+Runtime volume changes are disabled for playback stability. The bot downloads
+each requested track to temporary storage first, then plays the local audio file,
+so users should adjust Discord's per-user volume instead of using `/volume`.
 
 YouTube can block anonymous droplet playback. If playback starts failing, export
 YouTube cookies in Netscape format to a file on the droplet and set
 `YOUTUBE_COOKIES_FILE` in `.env`. Keep cookie values private.
-The bot uses `yt-dlp --cookies --get-url` to resolve an authenticated audio URL.
-When YouTube returns WebM/Opus audio, the bot streams it directly as Opus so
-FFmpeg and the JavaScript DSP volume pipeline can be skipped. If YouTube only
-returns another format, playback falls back to FFmpeg.
+The bot uses `yt-dlp --cookies` to download a temporary audio file before
+playback. WebM/Opus downloads are played as Opus without FFmpeg when possible;
+other formats fall back to FFmpeg from the local file. Temporary files are
+deleted after the track finishes, errors, skips, or the queue is deleted.
 
 Recommended droplet cookie setup:
 
@@ -176,5 +176,5 @@ the `stupider-discord-bot` service.
 ## Music notes
 
 Music playback is YouTube-first with an in-memory queue. `YOUTUBE_COOKIES_FILE`
-is preferred on the droplet because it lets `yt-dlp` resolve authenticated
-Googlevideo URLs without piping the whole song through `yt-dlp`.
+is preferred on the droplet because it lets `yt-dlp` download authenticated
+temporary audio files without piping the whole song through `yt-dlp` stdout.

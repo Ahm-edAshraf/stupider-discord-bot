@@ -82,8 +82,10 @@ It also requires either `python3` or `python` before running `bun install`.
 - When `YOUTUBE_COOKIES_FILE` is set, streaming uses `youtube-dl-exec` with `--cookies`.
 - yt-dlp is run with Bun as the JS runtime and `remoteComponents=ejs:npm` for YouTube EJS challenge solving.
 - Stream selection prefers low-bitrate WebM/Opus audio formats to reduce stutter on the droplet.
-- Playback uses `yt-dlp --cookies --get-url` to resolve an authenticated Googlevideo URL.
-- WebM/Opus playback returns a demuxable stream to `discord-player` so FFmpeg and DSP can be skipped.
+- Playback uses `yt-dlp --cookies` to download each track to temporary storage before playback.
+- WebM/Opus temp files return a demuxable stream to `discord-player` so FFmpeg and DSP can be skipped when possible.
+- Non-WebM/Opus temp files fall back to local-file FFmpeg playback.
+- Temporary music files are deleted after finish, error, skip, or queue deletion.
 - Runtime volume/DSP is disabled for playback stability; users should adjust Discord's per-user volume instead of relying on `/volume`.
 - Do not pipe full playback through `yt-dlp` stdout unless URL playback breaks; the long-running pipe can peg one CPU core and cause Discord audio stutter/catch-up.
 - `youtube-dl-exec` is in `trustedDependencies` so Bun runs its installer and downloads `yt-dlp`.
