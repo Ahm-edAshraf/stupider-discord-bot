@@ -2,6 +2,7 @@ import { Player } from "discord-player";
 import type { ExtractorStreamable, Track } from "discord-player";
 import { YoutubeiExtractor } from "discord-player-youtubei";
 import type { Client, SendableChannels } from "discord.js";
+import { createReadStream } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -53,6 +54,12 @@ async function cleanupTrackTempFiles(track: Track) {
   );
 }
 
+function scheduleCleanupTrackTempFiles(track: Track, delayMs = 60_000) {
+  setTimeout(() => {
+    void cleanupTrackTempFiles(track);
+  }, delayMs).unref();
+}
+
 async function cleanupAllTempFiles() {
   const tracks = [...tempPathsByTrack.keys()];
   const paths = [...tempPathsByTrack.values()].flat();
@@ -68,6 +75,12 @@ async function cleanupAllTempFiles() {
   if (tracks.length > 0) {
     console.log(`Cleaned temp files for ${tracks.length} track(s).`);
   }
+}
+
+function scheduleCleanupAllTempFiles(delayMs = 60_000) {
+  setTimeout(() => {
+    void cleanupAllTempFiles();
+  }, delayMs).unref();
 }
 
 async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable> {
@@ -128,7 +141,7 @@ async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable>
             {
               name: `${client.name} webm`,
               file: webmFile,
-              createStream: () => webmFile,
+              createStream: () => createReadStream(webmFile),
               flags: {
                 ...commonFlags,
                 format: webmFormat,
@@ -140,7 +153,7 @@ async function createYoutubeDlStream(track: Track): Promise<ExtractorStreamable>
       {
         name: `${client.name} fallback`,
         file: fallbackFile,
-        createStream: () => fallbackFile,
+        createStream: () => createReadStream(fallbackFile),
         flags: {
           ...commonFlags,
           format: fallbackFormat,
@@ -209,7 +222,7 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
 
   player.events.on("playerError", (queue, error, track) => {
     console.error(`Music player error in ${queue.guild.name} for ${track.title}:`, error);
-    void cleanupTrackTempFiles(track);
+    scheduleCleanupTrackTempFiles(track);
     void sendToMusicChannel(queue.metadata as MusicMetadata | null, {
       embeds: [
         buildErrorEmbed(
@@ -220,15 +233,15 @@ export async function createMusicPlayer(client: Client): Promise<Player> {
   });
 
   player.events.on("playerFinish", (_queue, track) => {
-    void cleanupTrackTempFiles(track);
+    scheduleCleanupTrackTempFiles(track);
   });
 
   player.events.on("playerSkip", (_queue, track) => {
-    void cleanupTrackTempFiles(track);
+    scheduleCleanupTrackTempFiles(track);
   });
 
   player.events.on("queueDelete", () => {
-    void cleanupAllTempFiles();
+    scheduleCleanupAllTempFiles();
   });
 
   player.events.on("playerStart", (queue, track) => {
